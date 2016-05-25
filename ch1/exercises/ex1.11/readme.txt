@@ -1,0 +1,1 @@
+fetchall waits until the connection times out
