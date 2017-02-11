@@ -18,8 +18,8 @@ func TestEqual(t *testing.T) {
 	cyclePtr2 = &cyclePtr2
 
 	type CycleSlice []CycleSlice
-	var cycleSlice CycleSlice
-	cycleSlice = append(cycleSlice, cycleSlice)
+	var cycleSlice = make(CycleSlice, 1)
+	cycleSlice[0] = cycleSlice
 
 	ch1, ch2 := make(chan int), make(chan int)
 	var ch1ro <-chan int = ch1
@@ -93,7 +93,7 @@ func TestEqual(t *testing.T) {
 	}
 }
 
-func ExampleEqual() {
+func Example_equal() {
 	//!+
 	fmt.Println(Equal([]int{1, 2, 3}, []int{1, 2, 3}))        // "true"
 	fmt.Println(Equal([]string{"foo"}, []string{"bar"}))      // "false"
@@ -108,7 +108,7 @@ func ExampleEqual() {
 	// true
 }
 
-func ExampleEqualCycle() {
+func Example_equalCycle() {
 	//!+cycle
 	// Circular linked lists a -> b -> a and c -> c.
 	type link struct {

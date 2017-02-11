@@ -2,24 +2,11 @@
 // License: https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 // See page 362.
-//
-// The version of this program that appeared in the first and second
-// printings did not comply with the proposed rules for passing
-// pointers between Go and C, described here:
-// https://github.com/golang/proposal/blob/master/design/12416-cgo-pointers.md
-//
-// The rules forbid a C function like bz2compress from storing 'in'
-// and 'out' (pointers to variables allocated by Go) into the Go
-// variable 's', even temporarily.
-//
-// The version below, which appears in the third printing, has been
-// corrected.  To comply with the rules, the bz_stream variable must
-// be allocated by C code.  We have introduced two C functions,
-// bz2alloc and bz2free, to allocate and free instances of the
-// bz_stream type.  Also, we have changed bz2compress so that before
-// it returns, it clears the fields of the bz_stream that contain
-// pointers to Go variables.
-
+// This is the version that appears in print,
+// but it does not comply with the proposed
+// rules for passing pointers between Go and C.
+// (https://github.com/golang/proposal/blob/master/design/12416-cgo-pointers.md)
+// See gopl.io/ch13/bzip for an updated version.
 //!+
 
 // Package bzip provides a writer that uses bzip2 compression (bzip.org).
@@ -29,11 +16,8 @@ package bzip
 #cgo CFLAGS: -I/usr/include
 #cgo LDFLAGS: -L/usr/lib -lbz2
 #include <bzlib.h>
-#include <stdlib.h>
-bz_stream* bz2alloc() { return calloc(1, sizeof(bz_stream)); }
 int bz2compress(bz_stream *s, int action,
                 char *in, unsigned *inlen, char *out, unsigned *outlen);
-void bz2free(bz_stream* s) { free(s); }
 */
 import "C"
 
@@ -50,10 +34,12 @@ type writer struct {
 
 // NewWriter returns a writer for bzip2-compressed streams.
 func NewWriter(out io.Writer) io.WriteCloser {
-	const blockSize = 9
-	const verbosity = 0
-	const workFactor = 30
-	w := &writer{w: out, stream: C.bz2alloc()}
+	const (
+		blockSize  = 9
+		verbosity  = 0
+		workFactor = 30
+	)
+	w := &writer{w: out, stream: new(C.bz_stream)}
 	C.BZ2_bzCompressInit(w.stream, blockSize, verbosity, workFactor)
 	return w
 }
@@ -92,7 +78,6 @@ func (w *writer) Close() error {
 	}
 	defer func() {
 		C.BZ2_bzCompressEnd(w.stream)
-		C.bz2free(w.stream)
 		w.stream = nil
 	}()
 	for {
